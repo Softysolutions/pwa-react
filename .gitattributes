@@ -1,0 +1,8 @@
+# Set line ending conversion for certain file types
+*.js text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Set merge strategy for certain file types
+*.jsx merge=ours

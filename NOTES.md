@@ -2,8 +2,8 @@
 ## Create app
 ### Build and run devbase docker image
 ```
-docker build -f docker/Dockerfile.dev --target devbase -t pwa-react:devbase .
-docker run --rm -it -p 3000:3000 -v .:/home/node/app --name=pwa pwa-react:devbase
+docker build -f docker/Dockerfile.dev --target devtools -t pwa-react:devtools .
+docker run --rm -it -p 3000:3000 -v .:/app -v pwa-react_docker-home:/home/node --name=pwa pwa-react:devtools
 ```
 
 
@@ -19,7 +19,7 @@ npm install react-bootstrap bootstrap
 
 ```
 docker build -f docker/Dockerfile.dev -t pwa-react:dev .
-docker run --rm -it -p 3000:3000 -v .:/home/node/app -v /home/node/app/node_modules --name=pwa pwa-react:dev
+docker run --rm -it -p 3000:3000 -v .:/app -v pwa-react_docker-home:/home/node --name=pwa pwa-react:dev
 ```
 
 

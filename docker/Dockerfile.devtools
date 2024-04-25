@@ -9,7 +9,7 @@
 #
 # Dockerfile description:
 # - The devtools stage can be based on top of debian images.
-# - It tmux, OhMyZSH, Powerlevel etc neccessary tools.
+# - It has tmux, OhMyZSH, Powerlevel etc neccessary tools.
 # - For more details checkout my blog
 # - For alpine based devtools checkout my other blog.
 # ###########################################################
@@ -24,15 +24,12 @@
 # ex. -v devtools-home:/home/<username> 
 #############################################################
 
-# TODO: POSTQUISITES ########################################
-# 1. Launch `tmux` and press ctrl+b+I means prefix+I
-# to setup its plugins.
+# IMPORTANT NOTES: ##########################################
+# 1. Use `p10k configure` command to reconfigure powerline UI.
 #
-# 2. Use `p10k configure` command to reconfigure powerline UI.
+# 2. You may customize ~/.zshrc ~/.tmux.conf and ~/.p10k.conf
 #
-# 3. You may customize ~/.zshrc ~/.tmux.conf and ~/.p10k.conf
-#
-# 4. Inside container now you may `su <ADMIN_USER>`
+# 3. Inside container now you may `su <ADMIN_USER>`
 # to do some admin tasks.
 #############################################################
 
@@ -73,12 +70,12 @@ ARG ADMIN_PASSWORD
 RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux fontconfig git ca-certificates \
     build-essential # Add build essentials for compiling code
 
-# ## Add admin user
-# RUN useradd ${ADMIN_USER} && \
-#     echo "${ADMIN_USER}:${ADMIN_PASSWORD}" | chpasswd && \
-#     apt-get update && \
-#     apt-get -y --no-install-recommends install sudo && \
-#     echo "${ADMIN_USER} ALL=(ALL) ALL" >> /etc/sudoers
+## Add admin user
+RUN useradd ${ADMIN_USER} && \
+    echo "${ADMIN_USER}:${ADMIN_PASSWORD}" | chpasswd && \
+    apt-get update && \
+    apt-get -y --no-install-recommends install sudo && \
+    echo "${ADMIN_USER} ALL=(ALL) ALL" >> /etc/sudoers
 
 ## User settings
 

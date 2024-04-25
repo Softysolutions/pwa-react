@@ -14,7 +14,7 @@ EXPOSE 3000
 
 ## create a non-root user for security 
 ## Optional because user `node` exist in this image
-### RUN useradd -m -s /bin/bash react
+### RUN useradd -m -s /bin/bash username
 
 #! DEVTOOLS ################################################
 FROM base as devtools
@@ -66,7 +66,7 @@ RUN sed -i -e 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10
     sed -i -e 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions fzf tmux)/' ~/.zshrc && \
     echo 'export PATH="$PATH:/home/rails/.local/bin"' >> ~/.zshrc
 
-## Solve nerd font level font issue in tmux
+## Solve nerd font font issue
 USER root
 RUN apt-get install -y --no-install-recommends locales && \
     locale-gen en_US.UTF-8 && \
@@ -76,13 +76,10 @@ RUN apt-get install -y --no-install-recommends locales && \
 
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
-
-USER node
-
+    LC_ALL=en_US.UTF-8 \
+    TERM=xterm-256color
 
 ## Install additional tools
-USER root
 RUN apt-get -y --no-install-recommends install \
     vim \
     less \
@@ -95,6 +92,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 USER node
 CMD ["/bin/zsh"]
+
 
 
 

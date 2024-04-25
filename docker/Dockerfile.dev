@@ -4,7 +4,7 @@
 FROM node:slim as base
 
 ## Setting up the work directory
-WORKDIR /home/node/app
+WORKDIR /app
 
 # Update ENVIRONMENT variable $PATH
 ENV PATH /app/node_modules/.bin:$PATH
@@ -16,11 +16,11 @@ EXPOSE 3000
 ## Optional because user `node` exist in this image
 ### RUN useradd -m -s /bin/bash react
 
-#! DEVBASE ################################################
-FROM base as devbase
+#! DEVTOOLS ################################################
+FROM base as devtools
 
 ## Install devtools
-RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux git ca-certificates \
+RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux fontconfig git ca-certificates \
     build-essential # Add build essentials for compiling code
 
 ## Add admin user
@@ -38,8 +38,18 @@ RUN chsh -s /bin/zsh node
 ### select User
 USER node
 
-### create .devtools folder to sync dev configuration files
-RUN mkdir -p ~/.devtools
+### Install tmux plugins and theme
+RUN git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm && \
+    touch ~/.tmux.conf && \
+    echo 'set -g default-terminal screen-256color' >> ~/.tmux.conf && \
+    echo '#Toggle status bar by Prefix+I (default ctrl+b+I)' >> ~/.tmux.conf && \
+    echo 'bind b run-shell "tmux setw -g status \$(tmux show -g -w status | grep -q off && echo on || echo off)"' >> ~/.tmux.conf && \
+    echo 'set -g mouse on' >> ~/.tmux.conf && \
+    echo 'set -g @plugin "tmux-plugins/tpm"' >> ~/.tmux.conf && \
+    echo 'set -g @plugin "tmux-plugins/tmux-resurrect"' >> ~/.tmux.conf && \
+    echo 'set -g @plugin "jimeh/tmux-themepack"' >> ~/.tmux.conf && \
+    echo 'set -g @themepack "powerline/default/gray"' >> ~/.tmux.conf && \
+    echo 'run-shell "~/.tmux/plugins/tpm/tpm"' >> ~/.tmux.conf
 
 ### Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
@@ -69,36 +79,11 @@ RUN rm -rf /var/lib/apt/lists/*
 USER node
 CMD ["/bin/zsh"]
 
-### Install tmux plugins and theme
-RUN git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm && \
-    touch ~/.devtools/.tmux.conf && \
-    echo 'set -g default-terminal screen-256color' >> ~/.devtools/.tmux.conf && \
-    echo 'bind b run-shell "tmux setw -g status \$(tmux show -g -w status | grep -q off && echo on || echo off)"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g mouse on' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @plugin "tmux-plugins/tpm"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @plugin "tmux-plugins/tmux-resurrect"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @plugin "2kabhishek/tmux2k"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-left-plugins "git"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-right-plugins "cpu-usage ram-usage"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-show-powerline true' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-show-fahrenheit false' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-military-time false' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-border-contrast true' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-cpu-usage-colors "blue dark_gray"' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-show-left-icon ""' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-show-left-sep ""' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-show-right-sep ""' >> ~/.devtools/.tmux.conf && \
-    echo 'set -g @tmux2k-refresh-rate 5' >> ~/.devtools/.tmux.conf && \
-    echo 'run-shell "~/.tmux/plugins/tpm/tpm"' >> ~/.devtools/.tmux.conf
-
-### link custom tmux
-RUN ln -sf "~/.devtools/.tmux.conf" ~/.tmux.conf
-
 
 
 
 #? DEVELOPMENT ############################################
-FROM devbase as development
+FROM devtools as development
 
 ## Declaring env
 ENV NODE_ENV development

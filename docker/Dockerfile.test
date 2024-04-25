@@ -4,7 +4,7 @@
 FROM node:slim as base
 
 ## Setting up the work directory
-WORKDIR /home/node/app
+WORKDIR /app
 
 # Update ENVIRONMENT variable $PATH
 ENV PATH /app/node_modules/.bin:$PATH

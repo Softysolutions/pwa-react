@@ -30,3 +30,16 @@ docker run --rm -it -p 3000:3000 --name=pwa pwa-react:prod
 ```
 
 
+<!-- # Install Nerd Fonts on your local terminal
+# sh -c '\
+#     wget -P ~/Downloads \
+#     https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf && \
+#     wget -P ~/Downloads \
+#     https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf && \
+#     wget -P ~/Downloads \
+#     https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf && \
+#     wget -P ~/Downloads \
+#     https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf && \
+#     mkdir -p ~/.local/share/fonts/ && mv ~/Downloads/*.ttf ~/.local/share/fonts/ && \
+#     fc-cache -f -v \
+#     ' -->

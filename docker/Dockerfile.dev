@@ -19,8 +19,9 @@ EXPOSE 3000
 #! DEVBASE ################################################
 FROM base as devbase
 
-## Install dev tools
-RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux git ca-certificates
+## Install devtools
+RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux git ca-certificates \
+    build-essential # Add build essentials for compiling code
 
 ## Add admin user
 RUN useradd admin && \
@@ -29,24 +30,74 @@ RUN useradd admin && \
     apt-get -y --no-install-recommends install sudo && \
     echo "admin ALL=(ALL) ALL" >> /etc/sudoers
 
-## Clear cache
-RUN rm -rf /var/lib/apt/lists/*
+## User settings
 
-## Install Oh My Zsh for user node
+### Set default ZSH
+RUN chsh -s /bin/zsh node
+
+### select User
 USER node
+
+### create .devtools folder to sync dev configuration files
+RUN mkdir -p ~/.devtools
+
+### Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-RUN touch ~/.zshrc && \
-    sed -i -e 's/ZSH_THEME="robbyrussell"/ZSH_THEME="af-magic"/' ~/.zshrc && \
-    sed -i -e 's/plugins=(git)/plugins=(git)/' ~/.zshrc && \
+
+RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git \
+    ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
+    git clone https://github.com/zsh-users/zsh-autosuggestions \
+    ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
+
+RUN sed -i -e 's/ZSH_THEME="robbyrussell"/ZSH_THEME="af-magic"/' ~/.zshrc && \
+    sed -i -e 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions fzf tmux)/' ~/.zshrc && \
     echo 'export PATH="$PATH:/home/rails/.local/bin"' >> ~/.zshrc
 
+## Install additional tools
+USER root
+RUN apt-get -y --no-install-recommends install \
+    vim \
+    less \
+    htop \
+    wget \
+    tree
+
+### Clear cache
+RUN rm -rf /var/lib/apt/lists/*
+
+USER node
 CMD ["/bin/zsh"]
+
+### Install tmux plugins and theme
+RUN git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm && \
+    touch ~/.devtools/.tmux.conf && \
+    echo 'set -g default-terminal screen-256color' >> ~/.devtools/.tmux.conf && \
+    echo 'bind b run-shell "tmux setw -g status \$(tmux show -g -w status | grep -q off && echo on || echo off)"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g mouse on' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @plugin "tmux-plugins/tpm"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @plugin "tmux-plugins/tmux-resurrect"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @plugin "2kabhishek/tmux2k"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-left-plugins "git"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-right-plugins "cpu-usage ram-usage"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-show-powerline true' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-show-fahrenheit false' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-military-time false' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-border-contrast true' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-cpu-usage-colors "blue dark_gray"' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-show-left-icon ""' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-show-left-sep ""' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-show-right-sep ""' >> ~/.devtools/.tmux.conf && \
+    echo 'set -g @tmux2k-refresh-rate 5' >> ~/.devtools/.tmux.conf && \
+    echo 'run-shell "~/.tmux/plugins/tpm/tpm"' >> ~/.devtools/.tmux.conf
+
+### link custom tmux
+RUN ln -sf "~/.devtools/.tmux.conf" ~/.tmux.conf
 
 
 
 
 #? DEVELOPMENT ############################################
-## Fetching the minified node image on apline linux
 FROM devbase as development
 
 ## Declaring env

@@ -1,7 +1,52 @@
-# syntax = docker/dockerfile:1
+# ##########################################################
+# Dockerfile for Developer Tools.
+# Description: This Dockerfile is for adding a devtools stage.
+#
+# Author information:
+# Name: Rahul Dhole
+# Email: rdhole95@gmail.com
+# GitHub: https://github.com/rahuldhole
+#
+# Dockerfile description:
+# - The devtools stage can be based on top of debian images.
+# - It has tmux, OhMyZSH, Powerlevel etc neccessary tools.
+# - For more details checkout my blog
+#  https://dev.to/rahuldhole/docker-devtools-stage-powerlevel-ohmyzsh-tmux-fuzzy-finder-autocomplete-etc-8g1
+# ###########################################################
+
+
+# TODO: PREQUISITES #########################################
+# 1. You need to install below nerd fonts `MesloLGSNF`
+# and set it as your terminal font. read my blog to know more.
+#
+# 2. Add users home directory as volume to save devtools settings
+# and terminal history.
+# ex. -v devtools-home:/home/<username> 
+#############################################################
+
+# IMPORTANT NOTES: ##########################################
+# 1. Use `p10k configure` command to reconfigure powerline UI.
+#
+# 2. You may customize ~/.zshrc ~/.tmux.conf and ~/.p10k.conf
+#
+# 3. Inside container now you may `su <ADMIN_USER>`
+# to do some admin tasks.
+#############################################################
+
+
+
+# TODO: Update user details
+ARG USERNAME=debian
+ARG ADMIN_USER=admin
+ARG ADMIN_PASSWORD=admin
+
 
 #! BASE ####################################################
 FROM node:slim as base
+
+ARG USERNAME
+ARG ADMIN_USER
+ARG ADMIN_PASSWORD
 
 ## Setting up the work directory
 WORKDIR /app
@@ -12,31 +57,37 @@ ENV PATH /app/node_modules/.bin:$PATH
 ## Exposing server port
 EXPOSE 3000
 
-## create a non-root user for security 
-## Optional because user `node` exist in this image
-### RUN useradd -m -s /bin/bash username
+## create a non-root user for security
+RUN useradd -m -s /bin/bash $USERNAME
 
-#! DEVTOOLS ################################################
+
+
+
+
+#* DEVTOOLS ################################################
 FROM base as devtools
+ARG USERNAME
+ARG ADMIN_USER
+ARG ADMIN_PASSWORD
 
 ## Install devtools
 RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux fontconfig git ca-certificates \
     build-essential # Add build essentials for compiling code
 
 ## Add admin user
-RUN useradd admin && \
-    echo "admin:admin" | chpasswd && \
+RUN useradd ${ADMIN_USER} && \
+    echo "${ADMIN_USER}:${ADMIN_PASSWORD}" | chpasswd && \
     apt-get update && \
     apt-get -y --no-install-recommends install sudo && \
-    echo "admin ALL=(ALL) ALL" >> /etc/sudoers
+    echo "${ADMIN_USER} ALL=(ALL) ALL" >> /etc/sudoers
 
 ## User settings
 
 ### Set default ZSH
-RUN chsh -s /bin/zsh node
+RUN chsh -s /bin/zsh $USERNAME
 
 ### select User
-USER node
+USER $USERNAME
 
 ### Install tmux plugins and theme
 RUN git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm && \
@@ -48,8 +99,9 @@ RUN git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm && \
     echo 'set -g @plugin "tmux-plugins/tpm"' >> ~/.tmux.conf && \
     echo 'set -g @plugin "tmux-plugins/tmux-resurrect"' >> ~/.tmux.conf && \
     echo 'set -g @plugin "jimeh/tmux-themepack"' >> ~/.tmux.conf && \
-    echo 'set -g @themepack "powerline/default/gray"' >> ~/.tmux.conf && \
-    echo 'run-shell "~/.tmux/plugins/tpm/tpm"' >> ~/.tmux.conf
+    echo 'set -g @themepack "powerline/double/green"' >> ~/.tmux.conf && \
+    echo 'run-shell "~/.tmux/plugins/tpm/tpm"' >> ~/.tmux.conf && \
+    ~/.tmux/plugins/tpm/bin/install_plugins
 
 ### Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
@@ -64,7 +116,8 @@ RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
 
 RUN sed -i -e 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc && \
     sed -i -e 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions fzf tmux)/' ~/.zshrc && \
-    echo 'export PATH="$PATH:/home/rails/.local/bin"' >> ~/.zshrc
+    echo 'export PATH="$PATH:/home/rails/.local/bin"' >> ~/.zshrc && \
+    echo 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' >> ~/.zshrc
 
 ## Solve nerd font font issue
 USER root
@@ -90,7 +143,7 @@ RUN apt-get -y --no-install-recommends install \
 ### Clear cache
 RUN rm -rf /var/lib/apt/lists/*
 
-USER node
+USER $USERNAME
 CMD ["/bin/zsh"]
 
 
@@ -99,6 +152,7 @@ CMD ["/bin/zsh"]
 
 #? DEVELOPMENT ############################################
 FROM devtools as development
+ARG USERNAME
 
 ## Declaring env
 ENV NODE_ENV development
@@ -107,8 +161,8 @@ ENV NODE_ENV development
 USER root
 COPY package.json package-lock.json ./
 RUN chmod ugo+rwx package-lock.json
-RUN chown -R node:node ./
-USER node
+RUN chown -R $USERNAME:$USERNAME ./
+USER $USERNAME
 
 ## Installing dependencies
 RUN npm install

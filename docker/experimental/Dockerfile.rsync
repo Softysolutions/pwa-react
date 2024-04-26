@@ -1,16 +1,21 @@
 # Use a Debian base image
 FROM debian:latest
+ARG USERNAME=debian
+
+# Define environment variables
+ENV SOURCE_CODE_VOLUME_MOUNT="/host-code" \
+    WORKING_DIR="/app"
 
 # Install rsync, make, nano, and procps
 RUN apt-get update \
     && apt-get install -y rsync procps make nano  \
     && rm -rf /var/lib/apt/lists/*
 
-# Define environment variables
-ENV SOURCE_CODE_VOLUME_MOUNT="/host-code" \
-    WORKING_DIR="/app"
+## create a non-root user for security
+RUN useradd -m -s /bin/bash $USERNAME
 
 WORKDIR /app
+RUN chown -R $USERNAME:$USERNAME ./
 
 # Set up directories
 RUN mkdir /host-code
@@ -32,5 +37,6 @@ RUN echo '#!/bin/bash' > /usr/local/bin/dev_sync \
     && echo 'pkill -f "/usr/local/bin/dev_sync.sh"' >> /usr/local/bin/dev_sync_kill \
     && chmod +x /usr/local/bin/dev_sync /usr/local/bin/dev_sync_kill
 
+USER $USERNAME
 
 CMD ["/bin/bash"]

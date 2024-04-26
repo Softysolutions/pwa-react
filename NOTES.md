@@ -12,6 +12,7 @@ docker run --rm -it -p 3000:3000 -v .:/app -v debian-devtools:/home/debian --nam
 ```
 npx create-react-app pwa-app
 npm install react-bootstrap bootstrap 
+npm install react-router-dom
 ```
 
 

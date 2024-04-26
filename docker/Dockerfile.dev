@@ -48,8 +48,14 @@ ARG USERNAME
 ARG ADMIN_USER
 ARG ADMIN_PASSWORD
 
+## Define environment variables
+### TODO: at runtime mount source code directory as volume to /host-code
+ENV SOURCE_CODE_VOLUME_MOUNT="/host-code" \
+    WORKING_DIR="/app"
+
 ## Setting up the work directory
-WORKDIR /app
+WORKDIR $WORKING_DIR
+RUN mkdir $SOURCE_CODE_VOLUME_MOUNT
 
 # Update ENVIRONMENT variable $PATH
 ENV PATH /app/node_modules/.bin:$PATH
@@ -71,7 +77,7 @@ ARG ADMIN_USER
 ARG ADMIN_PASSWORD
 
 ## Install devtools
-RUN apt update && apt-get -y --no-install-recommends install nano zsh curl tmux fontconfig git ca-certificates \
+RUN apt update && apt-get -y --no-install-recommends install rsync procps nano zsh curl tmux fontconfig git ca-certificates \
     build-essential # Add build essentials for compiling code
 
 ## Add admin user
@@ -143,6 +149,24 @@ RUN apt-get -y --no-install-recommends install \
 ### Clear cache
 RUN rm -rf /var/lib/apt/lists/*
 
+## Use rsync to sync host's source code
+### Create rsync script
+RUN echo '#!/bin/bash' > /usr/local/bin/rsync_source \
+    && echo 'rsync -ha --exclude=log --exclude=public/packs --exclude=node_modules --exclude=tmp --exclude=.git --exclude=mysql --exclude=.env "${SOURCE_CODE_VOLUME_MOUNT}/." "${WORKING_DIR}/."' >> /usr/local/bin/rsync_source \
+    && chmod +x /usr/local/bin/rsync_source
+
+### Set up continuous sync loop
+RUN echo '#!/bin/bash' > /usr/local/bin/dev_sync.sh \
+    && echo 'while true; do /usr/local/bin/rsync_source; echo "sources synced."; sleep 3; done' >> /usr/local/bin/dev_sync.sh \
+    && chmod +x /usr/local/bin/dev_sync.sh
+
+### Define dev_sync and dev_sync_kill commands
+RUN echo '#!/bin/bash' > /usr/local/bin/dev_sync \
+    && echo '/usr/local/bin/dev_sync.sh > /dev/null 2>&1 &' >> /usr/local/bin/dev_sync \
+    && echo '#!/bin/bash' > /usr/local/bin/dev_sync_kill \
+    && echo 'pkill -f "/usr/local/bin/dev_sync.sh"' >> /usr/local/bin/dev_sync_kill \
+    && chmod +x /usr/local/bin/dev_sync /usr/local/bin/dev_sync_kill
+
 USER $USERNAME
 CMD ["/bin/zsh"]
 
@@ -157,19 +181,20 @@ ARG USERNAME
 ## Declaring env
 ENV NODE_ENV development
 
-## Copy package file
+COPY --chown=$USERNAME:$USERNAME package.json package-lock.json ./
+
+## Authorize
 USER root
-COPY package.json package-lock.json ./
 RUN chmod ugo+rwx package-lock.json
 RUN chown -R $USERNAME:$USERNAME ./
+
 USER $USERNAME
 
 ## Installing dependencies
 RUN npm install
 
 ## Copy application code
-## Copy application code
-COPY . .
+COPY --chown=$USERNAME:$USERNAME . ./
 
 ## Starting our application
 ## CMD [ "nodemon", "index.js" ]

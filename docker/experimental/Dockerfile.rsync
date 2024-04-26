@@ -1,0 +1,36 @@
+# Use a Debian base image
+FROM debian:latest
+
+# Install rsync, make, nano, and procps
+RUN apt-get update \
+    && apt-get install -y rsync procps make nano  \
+    && rm -rf /var/lib/apt/lists/*
+
+# Define environment variables
+ENV SOURCE_CODE_VOLUME_MOUNT="/host-code" \
+    WORKING_DIR="/app"
+
+WORKDIR /app
+
+# Set up directories
+RUN mkdir /host-code
+
+# Create rsync script
+RUN echo '#!/bin/bash' > /usr/local/bin/rsync_source \
+    && echo 'rsync -ha --exclude=log --exclude=public/packs --exclude=node_modules --exclude=tmp --exclude=.git --exclude=mysql --exclude=.env "${SOURCE_CODE_VOLUME_MOUNT}/." "${WORKING_DIR}/."' >> /usr/local/bin/rsync_source \
+    && chmod +x /usr/local/bin/rsync_source
+
+# Set up continuous sync loop
+RUN echo '#!/bin/bash' > /usr/local/bin/dev_sync.sh \
+    && echo 'while true; do /usr/local/bin/rsync_source; echo "sources synced."; sleep 3; done' >> /usr/local/bin/dev_sync.sh \
+    && chmod +x /usr/local/bin/dev_sync.sh
+
+# Define dev_sync and dev_sync_kill commands
+RUN echo '#!/bin/bash' > /usr/local/bin/dev_sync \
+    && echo '/usr/local/bin/dev_sync.sh > /dev/null 2>&1 &' >> /usr/local/bin/dev_sync \
+    && echo '#!/bin/bash' > /usr/local/bin/dev_sync_kill \
+    && echo 'pkill -f "/usr/local/bin/dev_sync.sh"' >> /usr/local/bin/dev_sync_kill \
+    && chmod +x /usr/local/bin/dev_sync /usr/local/bin/dev_sync_kill
+
+
+CMD ["/bin/bash"]
